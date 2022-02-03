@@ -3,8 +3,10 @@
 namespace App\Models;
 
 use Carbon\Carbon;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
 class Transaction extends Model
 {
@@ -14,7 +16,8 @@ class Transaction extends Model
       'category_id',
       'transaction_date',
       'amount',
-      'description'
+      'description',
+      'user_id'
     ];
 
     protected $dates = ['transaction_date'];
@@ -29,9 +32,23 @@ class Transaction extends Model
         $this->attributes['amount'] = $value * 100;
     }
 
+    public function user(): BelongsToMany
+    {
+        return $this->belongsToMany(User::class);
+    }
+
     public function setTransactionDateAttribute($value)
     {
         $this->attributes['transaction_date'] = Carbon::createFromFormat('m/d/y', $value)
                                                                         ->format('Y-m-d');
+    }
+
+    protected static function booted()
+    {
+        if (auth()->check()) {
+            static::addGlobalScope('by_user', function (Builder $builder) {
+                $builder->where('user_id', auth()->id());
+            });
+        }
     }
 }
